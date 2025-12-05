@@ -1,0 +1,97 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{positioning, shapes.geometric, arrows}
+
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    keywordstyle=\color{blue},
+    stringstyle=\color{red},
+    commentstyle=\color{green!50!black},
+    language=Python
+}
+
+\title{Practical Work 2: RPC File Transfer}
+\author{Group Name \\ Member 1 \and Member 2}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{RPC Service Design}
+
+Unlike the socket approach where we manage the data stream manually, in this RPC design, we abstract the file transfer as a remote function call.
+\begin{itemize}
+    \item \textbf{Service Name:} \texttt{upload\_file}
+    \item \textbf{Parameters:} \texttt{filename} (String), \texttt{file\_data} (Binary)
+    \item \textbf{Return:} Boolean (True if success)
+\end{itemize}
+
+\begin{figure}[h]
+    \centering
+    \begin{tikzpicture}[node distance=2cm, auto]
+        
+        \node[rectangle, draw=black, fill=blue!10, minimum size=1cm] (client) {Client App};
+        \node[rectangle, draw=black, fill=green!10, minimum size=1cm, below=of client] (stub) {Client Stub (Proxy)};
+        \node[cloud, draw=black, fill=gray!10, below=of stub, minimum width=3cm] (net) {Network (XML-RPC/HTTP)};
+        \node[rectangle, draw=black, fill=green!10, below=of net] (skel) {Server Skeleton};
+        \node[rectangle, draw=black, fill=blue!10, minimum size=1cm, below=of skel] (server) {Server App};
+
+        
+        \draw[->, thick] (client) -- node {Call \texttt{upload\_file()}} (stub);
+        \draw[->, thick] (stub) -- node {Marshal} (net);
+        \draw[->, thick] (net) -- node {Unmarshal} (skel);
+        \draw[->, thick] (skel) -- node {Execute} (server);
+    \end{tikzpicture}
+    \caption{RPC Interaction Diagram}
+    \label{fig:rpc_design}
+\end{figure}
+
+\section{System Organization}
+
+The system is implemented using Python's \texttt{xmlrpc} library, allowing for a high-level abstraction of the network layer.
+\begin{itemize}
+    \item \textbf{Server:} Uses \texttt{SimpleXMLRPCServer} to listen on port 12345 and registers the file saving function.
+    \item \textbf{Client:} Uses \texttt{xmlrpc.client.ServerProxy} to invoke methods on the server.
+\end{itemize}
+
+\section{Implementation}
+
+Below is the core logic for the RPC file transfer.
+
+\subsection{Server-side: Registering the Function}
+\begin{lstlisting}
+def save_file_rpc(filename, file_data):
+    with open("received_" + filename, "wb") as handle:
+        handle.write(file_data.data)
+    return True
+
+server = SimpleXMLRPCServer(("localhost", 12345))
+server.register_function(save_file_rpc, "upload_file")
+server.serve_forever()
+\end{lstlisting}
+
+\subsection{Client-side: Calling the Remote Method}
+\begin{lstlisting}
+proxy = xmlrpc.client.ServerProxy("http://localhost:12345/")
+with open("send_me.txt", "rb") as handle:
+    binary_data = xmlrpc.client.Binary(handle.read())
+    proxy.upload_file("send_me.txt", binary_data)
+\end{lstlisting}
+
+\section{Task Division}
+
+\begin{itemize}
+    \item \textbf{Member A:} Researched Python XML-RPC library and implemented the Server logic.
+    \item \textbf{Member B:} Implemented the Client logic and handled binary data encoding.
+    \item \textbf{Member C:} Designed the system architecture and wrote the report.
+\end{itemize}
+
+\end{document}

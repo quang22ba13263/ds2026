@@ -1,0 +1,77 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{color}
+
+\title{Practical Work 1: TCP File Transfer}
+\author{Quang}
+\date{\today}
+
+\section{Introduction}
+The goal of Practical Work 1 is to implement a 1--1 file transfer system over TCP/IP using low-level socket programming.
+The system contains two components: a server that receives files and a client that sends files.
+
+\begin{document}
+
+\maketitle
+
+\section{Protocol Design}
+
+The protocol used for transferring files is designed as follows:
+\begin{enumerate}
+    \item The client establishes a TCP connection with the server.
+    \item The client reads the file in chunks of 1024 bytes.
+    \item The client sends data chunks continuously until EOF (End of File).
+    \item The server receives data and writes to a local file.
+\end{enumerate}
+
+\begin{figure}[h]
+\centering
+\begin{verbatim}
+Client                                      Server
+  |                                           |
+  | --- 1. Send Filename Size (int) --------> |
+  | --- 2. Send Filename (string) ----------> |
+  | --- 3. Send File Size (long) -----------> |
+  | --- 4. Send File Content (binary) ------> |
+  |                                           |
+\end{verbatim}
+\caption{Protocol Design (Text view)}
+\end{figure}
+
+\section{System Organization}
+
+The system consists of two main components:
+\begin{itemize}
+    \item \textbf{Server:} Opens a socket, binds to port 12345, and listens for incoming connections.
+    \item \textbf{Client:} Connects to the server IP and sends the binary data of the file.
+\end{itemize}
+
+\section{File Transfer Implementation}
+
+Below is the core implementation of the file sending function in C:
+
+\begin{lstlisting}[language=C, caption=File Sending Logic]
+void send_file(FILE *fp, int sockfd) {
+    char data[BUFFER_SIZE] = {0};
+    int n;
+    while ((n = fread(data, 1, BUFFER_SIZE, fp)) > 0) {
+        if (send(sockfd, data, n, 0) == -1) {
+            perror("[-]Error in sending file.");
+            exit(1);
+        }
+        bzero(data, BUFFER_SIZE);
+    }
+}
+\end{lstlisting}
+
+\section{Roles and Responsibilities}
+
+\begin{itemize}
+    \item \textbf{Member A:} Implemented the Server-side socket logic.
+    \item \textbf{Member B:} Implemented the Client-side logic and file handling.
+    \item \textbf{Member C:} Designed the protocol and wrote the report.
+\end{itemize}
+
+\end{document}
