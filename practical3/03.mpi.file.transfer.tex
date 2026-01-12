@@ -1,0 +1,68 @@
+
+```latex
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
+\usepackage{graphicx}
+\usepackage{hyperref}
+
+\title{Practical Work 3: MPI File Transfer}
+
+\begin{document}
+
+\maketitle
+
+\section{MPI Implementation Choice}
+For this project, I chose \textbf{OpenMPI} combined with the \textbf{mpi4py} Python library. This choice was made because OpenMPI is an open-source, high-performance implementation that is widely supported across different platforms. Using \texttt{mpi4py} allows for rapid development while maintaining the efficiency of MPI's message-passing capabilities in a distributed environment.
+
+\section{Design and Organization}
+The system is designed using a **Coordinator-Worker** pattern.
+
+\subsection{System Organization}
+The organization consists of one central node and multiple processing nodes:
+\begin{itemize}
+    \item \textbf{Coordinator (Rank 0):} Acts as the server/source that holds the original file.
+    \item \textbf{Workers (Rank 1 to $N-1$):} Act as the clients/receivers that store the transferred data.
+\end{itemize}
+
+\subsection{Service Design}
+The file transfer process follows these steps:
+\begin{enumerate}
+    \item The Coordinator reads the file metadata and sends it to all workers using Tag 1.
+    \item The file is split into chunks of $4096$ bytes.
+    \item Chunks are distributed to workers using Tag 2 in a round-robin sequence.
+    \item Once the file is fully read, the Coordinator sends an end signal using Tag 3 to stop worker processes.
+\end{enumerate}
+
+\section{Implementation}
+The core logic for distributing file chunks is implemented as follows:
+
+\begin{verbatim}
+# Coordinator chunk distribution logic
+with open(filename, 'rb') as f:
+    while True:
+        chunk_data = f.read(CHUNK_SIZE)
+        if not chunk_data:
+            break
+        
+        chunk = {'id': chunk_id, 'data': chunk_data}
+        MPI.COMM_WORLD.send(chunk, dest=current_worker, tag=2)
+        
+        chunk_id += 1
+        current_worker = (current_worker % num_workers) + 1
+\end{verbatim}
+
+
+\section{Roles and Responsibilities}
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Role} & \textbf{Responsibility} \\ \hline
+Coordinator (Rank 0) & File I/O, Chunking, Load Balancing (Round-robin) \\ \hline
+Workers (Rank 1+) & Data reception, Writing to local disk, Progress reporting \\ \hline
+\end{tabular}
+\caption{Who does what in the system}
+\end{table}
+
+\end{document}
